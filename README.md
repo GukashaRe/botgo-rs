@@ -6,7 +6,7 @@ QQ 机器人 OpenAPI 与事件网关的 Rust SDK，是腾讯官方 Go SDK
 [`tencent-connect/botgo`](https://github.com/tencent-connect/botgo) 的本地 Rust 复刻。
 
 - 源码基线：`fe31c0dfe469001e0f783d2f07e7de7bd08b403f`（`v0.2.1`，2024-12-18）
-- Rust Edition 2024，MSRV 1.85
+- Rust Edition 2024，MSRV 1.88
 - 全部公开网络能力均为 `async`，基于 Tokio / Reqwest
 - 不持有全局可变状态；客户端、TokenSource、Gateway 都是显式值
 - 使用 typed event stream 取代 Go 版的全局回调注册表
@@ -29,7 +29,7 @@ QQ 机器人 OpenAPI 与事件网关的 Rust SDK，是腾讯官方 Go SDK
 
 ## 环境要求
 
-- Rust `1.85+`（Edition 2024）
+- Rust `1.88+`（Edition 2024）
 - Windows 编译原生依赖时需要 VS 2022 Build Tools，并勾选“使用 C++ 的桌面开发”
 - Linux/macOS 使用默认 `rustls` 即可；也可以切换 `native-tls`
 - 一个 QQ 开放平台机器人应用，并已开通沙盒环境
