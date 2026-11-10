@@ -7,6 +7,9 @@
 //! Run with:
 //! `cargo run --example echo`
 //!
+//! For SDK debug logs:
+//! `RUST_LOG=botgo=debug cargo run --example echo`
+//!
 //! This example always uses the QQ sandbox OpenAPI domain. It replies to
 //! `GROUP_AT_MESSAGE_CREATE` and `C2C_MESSAGE_CREATE` with the same text.
 
@@ -20,6 +23,8 @@ use futures_util::StreamExt;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
+    init_tracing();
+
     let app_id = std::env::var("QQ_BOT_APP_ID")
         .map_err(|_| botgo::Error::config("QQ_BOT_APP_ID is not set"))?;
     let app_secret = std::env::var("QQ_BOT_APP_SECRET")
@@ -92,4 +97,14 @@ fn reply(message: &Message) -> MessageToCreate {
         msg_id: message.id.clone(),
         ..MessageToCreate::default()
     }
+}
+
+fn init_tracing() {
+    use tracing_subscriber::EnvFilter;
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("botgo=info"));
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(true)
+        .init();
 }

@@ -1,6 +1,6 @@
 [package]
 name = "botgo"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 resolver = "3"
 rust-version = "1.88"
@@ -44,6 +44,7 @@ tokio-tungstenite = { version = "0.30.0", default-features = false, features = [
 tracing = "0.1.44"
 
 [dev-dependencies]
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 wiremock = "0.6.5"
 
 [features]

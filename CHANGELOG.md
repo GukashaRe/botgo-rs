@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-11
+
 ### Added
 
 - Markdown media image management: prepare, complete, list, delete, and a
@@ -25,6 +27,9 @@ All notable changes to this project are documented here. The format follows
 
 - Raised MSRV to Rust 1.88 because the latest `wiremock` dev-dependency uses
   let-chains, which were stabilized in 1.88.
+- Changed `GatewayEvent::Dispatch` to include the outer event ID and sequence
+  number for passive `event_id` replies.
+- Updated the production API domain to `https://api.bot.qq.com`.
 - Synced message, user, attachment, card, ARK, and keyboard models with API v2
   fields (`group_openid`, `message_type`, `ark_data`, `msg_elements`,
   `message_scene.ext`, `is_wakeup`, `card`, `unsupport_tips`, `reply`, `anchor`).

@@ -56,7 +56,7 @@ futures-util = "0.3"
 可关闭默认特性并启用 `native-tls`：
 
 ```toml
-botgo = { version = "0.1", default-features = false, features = ["native-tls"] }
+botgo = { version = "0.2", default-features = false, features = ["native-tls"] }
 ```
 
 ## 快速开始
@@ -172,6 +172,50 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\run-vs2022.ps1 run --examp
 ```powershell
 .\run-vs2022.ps1 check --example echo
 .\run-vs2022.ps1 test --all-targets
+```
+
+## 调试日志
+
+SDK 本身不安装全局 logger；它通过 `tracing` 发出事件。应用需要安装一个
+`tracing-subscriber`。`echo` 示例已经内置了初始化：
+
+```powershell
+$env:RUST_LOG = "botgo=debug"
+.\run-vs2022.ps1 run --example echo
+```
+
+Bash：
+
+```bash
+RUST_LOG=botgo=debug cargo run --example echo
+```
+
+SDK 的 DEBUG 输出包括：
+
+- OpenAPI 请求方法、URL
+- HTTP 状态码、trace ID、响应字节数
+- Token 刷新/过期信息
+
+不会输出 AccessToken 或 AppSecret，也不会打印完整请求/响应 body。
+
+在自己的程序中开启：
+
+```rust
+use tracing_subscriber::EnvFilter;
+
+tracing_subscriber::fmt()
+    .with_env_filter(
+        EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| EnvFilter::new("botgo=debug")),
+    )
+    .with_target(true)
+    .init();
+```
+
+需要在自己的 `Cargo.toml` 中添加：
+
+```toml
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ```
 
 ## 沙盒群聊/私聊主动消息测试
@@ -469,6 +513,16 @@ tests/
   sandbox_live.rs     opt-in 真实沙盒测试
   webhook.rs          签名与 ACK 测试
 ```
+
+## 版本管理
+
+当前版本：`0.2.0`。
+
+项目遵循 [Semantic Versioning](https://semver.org/)：
+
+- `0.x` 阶段，不兼容变更或成组新功能增加 minor 版本
+- 修复和文档更新增加 patch 版本
+- 每个发布版本在 `CHANGELOG.md` 中记录，并推送 `vX.Y.Z` Git tag
 
 ## 开发
 
