@@ -18,7 +18,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # windows-latest has Visual Studio installed, but cargo/cc needs the
       # MSVC environment (INCLUDE, LIB, cl.exe) loaded explicitly.
@@ -48,7 +48,7 @@ jobs:
     name: MSRV 1.88
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: "1.88.0"
