@@ -317,10 +317,10 @@ impl TokenSource for QqBotTokenSource {
     #[allow(clippy::significant_drop_tightening)]
     async fn token(&self) -> Result<AccessToken> {
         let mut cached = self.cached.lock().await;
-        if !self.invalidated.load(Ordering::Acquire) {
-            if let Some(token) = cached.as_ref().filter(|token| token.is_valid()) {
-                return Ok(token.clone());
-            }
+        if !self.invalidated.load(Ordering::Acquire)
+            && let Some(token) = cached.as_ref().filter(|token| token.is_valid())
+        {
+            return Ok(token.clone());
         }
         let previous = cached.take();
         let token = self.refresh(previous.as_ref()).await?;
