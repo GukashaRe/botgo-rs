@@ -1,9 +1,9 @@
-param(
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]] $CargoArgs
-)
-
 $ErrorActionPreference = 'Stop'
+
+# Use the automatic `$args` array instead of a ValueFromRemainingArguments
+# parameter: Windows PowerShell 5.1 drops Cargo's `--` separator when binding
+# named-looking arguments to a declared parameter.
+$CargoArgs = @($args)
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $vsRoot = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools'

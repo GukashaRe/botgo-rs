@@ -6,6 +6,7 @@ resolver = "3"
 rust-version = "1.85"
 authors = ["BotGo Rust contributors"]
 description = "An idiomatic Rust SDK for the Tencent QQ Bot OpenAPI and gateway"
+repository = "https://github.com/GukashaRe/botgo-rs"
 documentation = "https://docs.rs/botgo"
 readme = "README.md"
 license = "Apache-2.0"

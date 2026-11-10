@@ -27,6 +27,20 @@ QQ 机器人 OpenAPI 与事件网关的 Rust SDK，是腾讯官方 Go SDK
 | `search` | 内联搜索模拟器 |
 | `message` | `ETLInput`、@ 提及、子频道提及、emoji、命令解析 |
 
+## 环境要求
+
+- Rust `1.85+`（Edition 2024）
+- Windows 编译原生依赖时需要 VS 2022 Build Tools，并勾选“使用 C++ 的桌面开发”
+- Linux/macOS 使用默认 `rustls` 即可；也可以切换 `native-tls`
+- 一个 QQ 开放平台机器人应用，并已开通沙盒环境
+- 测试群聊时，机器人必须已加入该沙盒群；测试私聊时，用户必须先添加机器人好友
+
+Windows 下建议始终通过包装脚本构建，避免 `cc` 选到 VS 2019 或 `%TEMP%` 权限问题：
+
+```powershell
+.\run-vs2022.ps1 check
+```
+
 ## 安装
 
 本仓库是本地复刻项目，使用路径依赖：
@@ -84,6 +98,7 @@ async fn main() -> Result<()> {
 
 ```bash
 cargo run --example echo
+cargo run --example sandbox_check
 cargo run --example send_message
 cargo run --example gateway
 cargo run --example webhook
@@ -98,12 +113,31 @@ cargo run --example webhook
 - 收到 `GROUP_AT_MESSAGE_CREATE` 或 `C2C_MESSAGE_CREATE` 后，把收到的文本原样回复；
 - 使用 `msg_id` 做被动回复，避免主动消息频控。
 
+### 环境变量
+
+| 变量 | 必需 | 用途 |
+| --- | --- | --- |
+| `QQ_BOT_APP_ID` | 是 | 机器人 AppID |
+| `QQ_BOT_APP_SECRET` | 是 | 机器人 AppSecret，只在本地环境变量中设置 |
+| `QQ_BOT_GROUP_OPENID` | 测试群聊时 | 沙盒群 OpenID，`sandbox_check` 和 live test 使用 |
+| `QQ_BOT_USER_OPENID` | 测试私聊时 | 沙盒用户 OpenID，`sandbox_check` 和 live test 使用 |
+
+`group_openid` / `user_openid` 是平台下发的 OpenID，不是 QQ 群号或 QQ 号。
+启动 `echo` 后，在沙盒群 @机器人、或用另一个账号私聊机器人，控制台会打印：
+
+```text
+group <group_openid>: <content>
+c2c <user_openid>: <content>
+```
+
+把尖括号后的 ID 填入对应环境变量即可。
+
 PowerShell 运行：
 
 ```powershell
 $env:QQ_BOT_APP_ID = "你的 AppID"
 $env:QQ_BOT_APP_SECRET = "你的 AppSecret"
-cargo run --example echo
+.\run-vs2022.ps1 run --example echo
 ```
 
 Bash 运行：
@@ -139,6 +173,71 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\run-vs2022.ps1 run --examp
 .\run-vs2022.ps1 check --example echo
 .\run-vs2022.ps1 test --all-targets
 ```
+
+## 沙盒群聊/私聊主动消息测试
+
+[`examples/sandbox_check.rs`](examples/sandbox_check.rs) 用于验证沙盒 OpenAPI 和主动消息：
+
+1. 获取 AccessToken；
+2. 调用 `/users/@me` 验证沙盒鉴权；
+3. 如果设置了 `QQ_BOT_GROUP_OPENID`，向群发送一条主动测试消息；
+4. 如果设置了 `QQ_BOT_USER_OPENID`，向用户发送一条主动测试消息。
+
+```powershell
+$env:QQ_BOT_APP_ID = "你的 AppID"
+$env:QQ_BOT_APP_SECRET = "你的 AppSecret"
+$env:QQ_BOT_GROUP_OPENID = "沙盒群 OpenID"
+$env:QQ_BOT_USER_OPENID = "沙盒用户 OpenID"
+
+.\run-vs2022.ps1 run --example sandbox_check
+```
+
+只测试群聊时删除 `QQ_BOT_USER_OPENID`，只测试私聊时删除
+`QQ_BOT_GROUP_OPENID`。成功时输出类似：
+
+```text
+sandbox connected as <bot name> (<bot id>)
+group message sent: id=...
+c2c message sent: id=...
+sandbox check passed
+```
+
+注意：`sandbox_check` 发送的是**主动消息**，会消耗主动消息额度；群聊还要求机器人
+已在群内，私聊还要求用户已添加机器人好友并允许主动消息。被动回复请用 `echo`。
+
+## 自动化测试
+
+默认测试全部使用本地 Mock HTTP / WebSocket，不需要真实凭证：
+
+```bash
+cargo test --all-targets
+```
+
+Windows 下建议用包装脚本：
+
+```powershell
+.\run-vs2022.ps1 test --all-targets
+```
+
+真实沙盒测试是 opt-in 的 `#[ignore]` 测试，会发送主动消息：
+
+```powershell
+$env:QQ_BOT_APP_ID = "你的 AppID"
+$env:QQ_BOT_APP_SECRET = "你的 AppSecret"
+$env:QQ_BOT_GROUP_OPENID = "沙盒群 OpenID"
+$env:QQ_BOT_USER_OPENID = "沙盒用户 OpenID"
+
+.\run-vs2022.ps1 test --test sandbox_live -- --ignored --nocapture
+```
+
+只跑其中一个：
+
+```powershell
+.\run-vs2022.ps1 test --test sandbox_live sandbox_group_message -- --ignored --nocapture
+.\run-vs2022.ps1 test --test sandbox_live sandbox_c2c_message -- --ignored --nocapture
+```
+
+对应测试文件：[tests/sandbox_live.rs](tests/sandbox_live.rs)。
 
 ## WebSocket 事件网关
 
@@ -340,6 +439,33 @@ cargo update
 cargo test --all-targets
 ```
 
+## 项目结构
+
+```text
+src/
+  openapi.rs          OpenAPI v1/v2 客户端
+  token.rs            AccessToken 获取与刷新
+  gateway.rs          WebSocket 网关、分片、重连
+  event.rs            强类型事件分发
+  signature.rs        Ed25519 签名
+  webhook.rs          Webhook 校验与 ACK
+  message.rs          消息文本工具
+  models/             全部 DTO / 事件数据模型
+examples/
+  echo.rs             沙盒群聊/私聊 Echo
+  sandbox_check.rs    沙盒主动消息连通性测试
+  send_message.rs     频道消息发送
+  gateway.rs          网关事件监听
+  webhook.rs          Webhook 处理
+tests/
+  api_v2.rs           API v2 Mock 测试
+  gateway.rs          本地 WebSocket 网关测试
+  openapi.rs          OpenAPI Mock 测试
+  qq_group_c2c.rs     群聊/私聊 Mock 测试
+  sandbox_live.rs     opt-in 真实沙盒测试
+  webhook.rs          签名与 ACK 测试
+```
+
 ## 开发
 
 ```bash
@@ -349,9 +475,26 @@ cargo test --all-targets
 cargo doc --no-deps
 ```
 
-Windows 下如果 `aws-lc-sys` 编译因 `%TEMP%` 权限失败，可把 `TMP`/`TEMP` 指向工作区内的
-可写目录后再构建。仓库中的 `[profile.dev.package.aws-lc-sys] debug = false` 用于规避旧版
-MSVC 的调试记录长度限制。
+Windows 下直接用包装脚本：
+
+```powershell
+.\run-vs2022.ps1 test --all-targets
+```
+
+## 故障排查
+
+| 现象 | 原因 / 处理 |
+| --- | --- |
+| `vswhere` 仍显示 VS 2019 | 使用 `.\run-vs2022.ps1 ...`，脚本显式使用 VS 2022 |
+| `LNK1104` 无法打开 `lnk*.tmp` | `%TEMP%` 不可写；包装脚本会把 `TMP/TEMP` 指向项目内 `.tmp` |
+| `cargo` 报找不到 `link.exe` / `cl.exe` | 没有加载 MSVC 环境；使用包装脚本 |
+| `401` / `11244` | AppID/Secret 错误或 Token 失效；检查凭证并重新获取 |
+| `40054004` | 用户尚未添加机器人好友，C2C 主动消息不可用 |
+| `40034100` | 主动消息超过频控；等待额度恢复，或改用 `msg_id` 被动回复 |
+| `40034128` | 被动回复超时或次数超限；群消息 5 分钟/最多 5 次，C2C 60 分钟/最多 4 次 |
+| `11253` | 当前机器人没有该接口白名单权限，需在开放平台申请 |
+| 群聊收不到事件 | 确认机器人已加入该沙盒群，且消息中 @了机器人；订阅 `GROUP_MESSAGES` |
+| 私聊收不到事件 | 确认用户已添加机器人好友，并使用 `C2C_MESSAGE_CREATE` 场景 |
 
 ## 许可证
 
