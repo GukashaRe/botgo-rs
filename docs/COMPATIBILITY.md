@@ -69,7 +69,7 @@
 ## API v2 文档增量（2026-11）
 
 Go SDK 当前未覆盖 `https://bot.q.qq.com/wiki/develop/api-v2/` 中的群管理、菜单、
-面板、上传和流式接口；Rust 版已按该文档补齐。当前文档列出的 47 个 API 端点均有对应方法。
+面板、上传、素材和流式接口；Rust 版已按该文档补齐。当前文档列出的 51 个 API 端点均有对应方法。
 
 | 文档能力 | Rust 方法 |
 | --- | --- |
@@ -84,6 +84,7 @@ Go SDK 当前未覆盖 `https://bot.q.qq.com/wiki/develop/api-v2/` 中的群管�
 | 全局菜单查询 / 修改 | `menu`, `update_menu` |
 | 指令面板查询 / 创建 / 详情 / 修改 / 删除 / 关联对象 | `panels`, `create_panel`, `panel`, `update_panel`, `delete_panel`, `update_panel_targets` |
 | 机器人分享链接 | `generate_url_link` |
+| Markdown 素材图片上传 / 查询 / 删除 | `upload_media_image`, `prepare_media_image`, `complete_media_image`, `media_images`, `delete_media_image` |
 | 群/单聊富媒体 URL、二进制、分片上传 | `upload_group_file`, `upload_user_file`, `prepare_group_upload`, `finish_group_upload_part`, `prepare_user_upload`, `finish_user_upload_part` |
 | 流式单聊消息 | `stream_c2c_message` |
 

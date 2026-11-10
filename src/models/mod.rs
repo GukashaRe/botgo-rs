@@ -74,7 +74,9 @@ pub use panel::{
     PanelTargetUpdate, PanelUpdate, PanelUpdateResult,
 };
 pub use upload::{
-    FileUploadRequest, FileUploadResponse, MessageExtInfo, StreamMessageRequest,
-    StreamMessageResponse, UploadConfig, UploadPart, UploadPartFinish, UploadPrepareRequest,
-    UploadPrepareResponse, UrlLinkData, UrlLinkRequest, UrlLinkResponse,
+    FileUploadRequest, FileUploadResponse, MediaImage, MediaImageCompleteRequest,
+    MediaImageCompleteResponse, MediaImagePage, MediaImagePrepareRequest,
+    MediaImagePrepareResponse, MessageExtInfo, StreamMessageRequest, StreamMessageResponse,
+    UploadConfig, UploadPart, UploadPartFinish, UploadPrepareRequest, UploadPrepareResponse,
+    UrlLinkData, UrlLinkRequest, UrlLinkResponse,
 };

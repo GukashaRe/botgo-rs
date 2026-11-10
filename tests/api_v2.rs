@@ -424,6 +424,82 @@ async fn join_approval_strategy_and_group_mute_endpoints() {
     );
 }
 
+#[tokio::test]
+async fn media_image_upload_prepare_complete_list_and_delete() {
+    let server = MockServer::start().await;
+    let upload_url = format!("{}/upload", server.uri());
+    Mock::given(method("POST"))
+        .and(path("/v2/media-images/prepare"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "upload_id": "upload-1",
+            "presigned_url": upload_url,
+            "expires_in": 3600
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PUT"))
+        .and(path("/upload"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("ETag", "\"5d41402abc4b2a76b9719d911017c592\""),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v2/media-images/complete"))
+        .and(body_json(json!({
+            "upload_id": "upload-1",
+            "md5": "5d41402abc4b2a76b9719d911017c592"
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "image_id": "image-1",
+            "url": "qqbot-media://image/v1/token",
+            "ttl": 7_776_000,
+            "preview_url": "https://example.com/preview"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v2/media-images"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "images": [{
+                "image_id": "image-1",
+                "url": "qqbot-media://image/v1/token",
+                "file_name": "hello.txt",
+                "preview_url": "https://example.com/preview",
+                "created_at": 1_792_051_409,
+                "expires_at": 1_792_656_210
+            }],
+            "next_cursor": "",
+            "total": 1
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("DELETE"))
+        .and(path("/v2/media-images/image-1/delete"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let api = api(&server);
+    let uploaded = api
+        .upload_media_image("hello.txt", "image/png", b"hello")
+        .await
+        .unwrap();
+    assert_eq!(uploaded.image_id, "image-1");
+    assert_eq!(uploaded.url, "qqbot-media://image/v1/token");
+
+    let page = api.media_images(None).await.unwrap();
+    assert_eq!(page.total, 1);
+    assert_eq!(page.images[0].file_name, "hello.txt");
+    api.delete_media_image("image-1").await.unwrap();
+}
+
 #[test]
 fn group_member_event_intent_is_separate_from_message_intent() {
     assert_eq!(

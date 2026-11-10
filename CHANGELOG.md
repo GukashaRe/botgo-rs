@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Markdown media image management: prepare, complete, list, delete, and a
+  high-level hash-and-upload helper.
+- `message::mention_all_members()` for the QQ group `<qqbot-at-everyone />` tag.
+- Production OpenAPI domain updated to `https://api.bot.qq.com`; sandbox remains
+  `https://sandbox.api.sgroup.qq.com`.
 - API v2 group management: group info/state, members, blacklist, bulk removal,
   join requests and approval, mute settings.
 - Join approval strategies, global C2C menu, command panels, share links.

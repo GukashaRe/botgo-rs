@@ -43,9 +43,21 @@ pub fn mention_user(user_id: &str) -> String {
 }
 
 /// Returns the mention syntax for everyone.
+///
+/// This is the legacy `@everyone` form. For QQ group messages use
+/// [`mention_all_members`], which emits the `qqbot-at-everyone` inline tag.
 #[must_use]
 pub const fn mention_all() -> &'static str {
     "@everyone"
+}
+
+/// Returns the QQ group `@all members` inline tag.
+///
+/// The bot must be a group administrator, and each group can use this at most
+/// once per day.
+#[must_use]
+pub const fn mention_all_members() -> &'static str {
+    "<qqbot-at-everyone />"
 }
 
 /// Returns the mention syntax for a channel.
@@ -93,5 +105,6 @@ mod tests {
         assert_eq!(mention_user("42"), "<@42>");
         assert_eq!(mention_channel("7"), "<#7>");
         assert_eq!(emoji(4), "<emoji:4>");
+        assert_eq!(mention_all_members(), "<qqbot-at-everyone />");
     }
 }

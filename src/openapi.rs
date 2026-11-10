@@ -3,10 +3,12 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use reqwest::header::{AUTHORIZATION, USER_AGENT};
+use md5::{Digest, Md5};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, ETAG, USER_AGENT};
 use reqwest::{Method, StatusCode, Url};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
+use sha1::Sha1;
 
 use crate::error::{ApiError, Error, Result};
 use crate::models::{
@@ -25,11 +27,13 @@ use crate::models::{
     FileUploadResponse, GatewayUrl, GroupBlacklistPage, GroupBlacklistResult, GroupBlacklistUpdate,
     GroupBotState, GroupInfo, GroupJoinRequestApproval, GroupJoinRequestPage, GroupMember,
     GroupMemberList, GroupRestrictChatSetting, JoinApprovalStrategyPage,
-    JoinApprovalStrategyResult, JoinApprovalWhitelistResult, JoinApprovalWhitelistUpdate, Menu,
-    MenuResponse, MenuUpdate, MenuUpdateResult, Panel, PanelCreate, PanelCreateResult, PanelDetail,
-    PanelPage, PanelTargetUpdate, PanelUpdate, PanelUpdateResult, SetGroupMemberMutes,
-    StreamMessageRequest, StreamMessageResponse, UpdateJoinApprovalStrategy, UploadPartFinish,
-    UploadPrepareRequest, UploadPrepareResponse, UrlLinkRequest, UrlLinkResponse,
+    JoinApprovalStrategyResult, JoinApprovalWhitelistResult, JoinApprovalWhitelistUpdate,
+    MediaImageCompleteRequest, MediaImageCompleteResponse, MediaImagePage,
+    MediaImagePrepareRequest, MediaImagePrepareResponse, Menu, MenuResponse, MenuUpdate,
+    MenuUpdateResult, Panel, PanelCreate, PanelCreateResult, PanelDetail, PanelPage,
+    PanelTargetUpdate, PanelUpdate, PanelUpdateResult, SetGroupMemberMutes, StreamMessageRequest,
+    StreamMessageResponse, UpdateJoinApprovalStrategy, UploadPartFinish, UploadPrepareRequest,
+    UploadPrepareResponse, UrlLinkRequest, UrlLinkResponse,
 };
 use crate::token::TokenSource;
 
@@ -2783,6 +2787,157 @@ impl OpenApi {
             None,
             None,
         )
+        .await
+    }
+
+    /// Prepares a Markdown media image upload.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the request fails.
+    pub async fn prepare_media_image(
+        &self,
+        request: &MediaImagePrepareRequest,
+    ) -> Result<MediaImagePrepareResponse> {
+        let body = Self::body(request)?;
+        self.request_json(
+            Method::POST,
+            &["v2", "media-images", "prepare"],
+            &[],
+            Some(&body),
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Completes a Markdown media image upload after the presigned `PUT`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the request fails.
+    pub async fn complete_media_image(
+        &self,
+        request: &MediaImageCompleteRequest,
+    ) -> Result<MediaImageCompleteResponse> {
+        let body = Self::body(request)?;
+        self.request_json(
+            Method::POST,
+            &["v2", "media-images", "complete"],
+            &[],
+            Some(&body),
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Lists reusable Markdown media images.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the request fails.
+    pub async fn media_images(&self, cursor: Option<&str>) -> Result<MediaImagePage> {
+        self.request_json(
+            Method::GET,
+            &["v2", "media-images"],
+            &paging_query(cursor, None),
+            None,
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Deletes a reusable Markdown media image.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the request fails.
+    pub async fn delete_media_image(&self, image_id: &str) -> Result<()> {
+        self.request_empty(
+            Method::DELETE,
+            &["v2", "media-images", image_id, "delete"],
+            &[],
+            None,
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Uploads an image for use in Markdown and returns its reusable reference.
+    ///
+    /// The image is limited to 10 MiB. The method computes MD5 and SHA-1,
+    /// performs the presigned binary `PUT`, and completes the upload using the
+    /// returned ETag.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for oversized files, failed uploads, or invalid
+    /// responses.
+    pub async fn upload_media_image(
+        &self,
+        file_name: &str,
+        content_type: &str,
+        bytes: &[u8],
+    ) -> Result<MediaImageCompleteResponse> {
+        const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;
+        if bytes.len() > MAX_IMAGE_BYTES {
+            return Err(Error::Config(format!(
+                "media image is too large: {} bytes",
+                bytes.len()
+            )));
+        }
+
+        let mut md5 = Md5::new();
+        md5.update(bytes);
+        let md5_hex = hex::encode(md5.finalize());
+
+        let mut sha1 = Sha1::new();
+        sha1.update(bytes);
+        let sha1_hex = hex::encode(sha1.finalize());
+
+        let prepared = self
+            .prepare_media_image(&MediaImagePrepareRequest {
+                file_name: file_name.to_owned(),
+                file_size: u64::try_from(bytes.len())
+                    .map_err(|_| Error::Config("image length does not fit in u64".to_owned()))?,
+                content_type: content_type.to_owned(),
+                md5: md5_hex.clone(),
+                sha1: sha1_hex,
+            })
+            .await?;
+
+        let response = self
+            .inner
+            .client
+            .put(&prepared.presigned_url)
+            .timeout(self.inner.timeout)
+            .header(CONTENT_TYPE, content_type)
+            .body(bytes.to_vec())
+            .send()
+            .await?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await?;
+            return Err(Error::Protocol(format!(
+                "media image upload failed: HTTP {status}: {body}"
+            )));
+        }
+
+        let etag = response
+            .headers()
+            .get(ETAG)
+            .and_then(|value| value.to_str().ok())
+            .map(|value| value.trim_matches('"').to_owned())
+            .filter(|value| !value.is_empty())
+            .unwrap_or(md5_hex);
+
+        self.complete_media_image(&MediaImageCompleteRequest {
+            upload_id: prepared.upload_id,
+            md5: etag,
+        })
         .await
     }
 

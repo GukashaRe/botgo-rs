@@ -120,6 +120,86 @@ pub struct FileUploadResponse {
     pub raw_url: String,
 }
 
+/// Request to prepare a Markdown media image upload.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaImagePrepareRequest {
+    /// File name including extension.
+    pub file_name: String,
+    /// File size in bytes.
+    pub file_size: u64,
+    /// Image MIME type: `image/png`, `image/jpeg`, `image/gif`, or `image/webp`.
+    pub content_type: String,
+    /// Lowercase hexadecimal MD5.
+    pub md5: String,
+    /// Lowercase hexadecimal SHA-1.
+    pub sha1: String,
+}
+
+/// Response from preparing a Markdown media image upload.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MediaImagePrepareResponse {
+    /// Upload task ID, valid for four hours.
+    pub upload_id: String,
+    /// Presigned URL for a binary `PUT`.
+    pub presigned_url: String,
+    /// Presigned URL lifetime in seconds.
+    pub expires_in: u32,
+}
+
+/// Request to complete a Markdown media image upload.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaImageCompleteRequest {
+    /// Upload task ID returned by [`MediaImagePrepareResponse`].
+    pub upload_id: String,
+    /// MD5 ETag returned by the presigned `PUT`.
+    pub md5: String,
+}
+
+/// A reusable Markdown media image.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MediaImage {
+    /// Image ID.
+    pub image_id: String,
+    /// `qqbot-media://` Markdown reference.
+    pub url: String,
+    /// Original file name.
+    pub file_name: String,
+    /// Short-lived preview URL.
+    pub preview_url: String,
+    /// Upload time as a Unix timestamp.
+    pub created_at: i64,
+    /// Expiry time as a Unix timestamp.
+    pub expires_at: i64,
+}
+
+/// Response from completing a Markdown media image upload.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MediaImageCompleteResponse {
+    /// Image ID.
+    pub image_id: String,
+    /// `qqbot-media://` Markdown reference.
+    pub url: String,
+    /// Sliding validity window in seconds.
+    pub ttl: u32,
+    /// Short-lived preview URL.
+    pub preview_url: String,
+}
+
+/// A page of Markdown media images.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MediaImagePage {
+    /// Images ordered by upload time.
+    pub images: Vec<MediaImage>,
+    /// Cursor for the next page; empty at the end.
+    pub next_cursor: String,
+    /// Total number of active images.
+    pub total: u64,
+}
+
 /// Request to generate a bot share link.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]

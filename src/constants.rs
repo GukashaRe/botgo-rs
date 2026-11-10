@@ -1,7 +1,7 @@
 //! Protocol constants shared by the OpenAPI and gateway clients.
 
 /// Production OpenAPI domain.
-pub const API_DOMAIN: &str = "https://api.sgroup.qq.com";
+pub const API_DOMAIN: &str = "https://api.bot.qq.com";
 /// Sandbox OpenAPI domain.
 pub const SANDBOX_API_DOMAIN: &str = "https://sandbox.api.sgroup.qq.com";
 /// Token service domain.

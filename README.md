@@ -17,7 +17,7 @@ QQ 机器人 OpenAPI 与事件网关的 Rust SDK，是腾讯官方 Go SDK
 
 | 模块 | 内容 |
 | --- | --- |
-| `openapi` | v1 频道接口 + v2 群管理、入群审批、菜单、指令面板、富媒体上传、流式消息等全部 v2 接口 |
+| `openapi` | v1 频道接口 + v2 群管理、入群审批、菜单、指令面板、素材管理、富媒体上传、流式消息等全部 v2 接口 |
 | `token` | QQ Bot `appId`/`clientSecret` TokenSource，缓存、并发去重、后台提前刷新 |
 | `gateway` | WebSocket 分片、Hello/Identify/Resume、心跳、断线重连、会话恢复，含群/C2C 生命周期事件 |
 | `event` | 全部事件类型的强类型枚举，未知事件保留原始 JSON |
@@ -336,7 +336,7 @@ while let Some(item) = events.next().await {
 
 ## API v2 群管理与高级能力
 
-已按 2026-11 的 [QQ 机器人 API v2 文档](https://bot.q.qq.com/wiki/develop/api-v2/) 补齐该文档列出的 47 个 API 端点：
+已按 2026-11 的 [QQ 机器人 API v2 文档](https://bot.q.qq.com/wiki/develop/api-v2/) 补齐该文档列出的 51 个 API 端点：
 
 | 能力 | 方法 |
 | --- | --- |
@@ -349,6 +349,7 @@ while let Some(item) = events.next().await {
 | 全局自定义菜单 | `menu`, `update_menu` |
 | 指令面板 | `panels`, `create_panel`, `panel`, `update_panel`, `delete_panel`, `update_panel_targets` |
 | 分享链接 | `generate_url_link` |
+| 素材管理（Markdown 图片） | `upload_media_image`, `prepare_media_image`, `complete_media_image`, `media_images`, `delete_media_image` |
 | 富媒体上传 | `upload_group_file`, `upload_user_file`, `prepare_group_upload`, `finish_group_upload_part`, `prepare_user_upload`, `finish_user_upload_part` |
 | 流式单聊 | `stream_c2c_message` |
 | 通用网关 | `gateway`（`GET /gateway`） |
@@ -360,6 +361,8 @@ while let Some(item) = events.next().await {
 - 新增事件：`GROUP_MESSAGE_CREATE`、`GROUP_ADD_ROBOT`、`GROUP_DEL_ROBOT`、`GROUP_JOIN_REQUEST`、`GROUP_MEMBER_ADD`、`GROUP_MEMBER_REMOVE`、`GROUP_MSG_RECEIVE`、`GROUP_MSG_REJECT`、`C2C_MSG_RECEIVE`、`C2C_MSG_REJECT`
 
 消息模型也已同步 v2 字段：`group_openid`、`message_type`、`ark_data`、`msg_elements`、`message_scene.ext`、语音附件、图文卡片（`msg_type=8`）、`is_wakeup`、`force_verify_image_resource`，以及按钮的 `unsupport_tips` / `reply` / `anchor`。
+
+Markdown 中可使用 `message::mention_all_members()` 生成 `<qqbot-at-everyone />`（需机器人为群管理员，每个群每天 1 次）。生产 OpenAPI 域名已切换到 `https://api.bot.qq.com`，沙盒仍使用 `https://sandbox.api.sgroup.qq.com`。
 
 `GatewayEvent::Dispatch { event, event_id, seq }` 会保留事件外层 `id`，因此
 `GROUP_ADD_ROBOT`、`GROUP_MSG_RECEIVE` 等事件可直接用 `event_id` 做被动回复；
@@ -431,6 +434,7 @@ HTTP 200 + 负 ACK，让平台重试；签名失败返回 `Error::Signature`，�
 | `futures-util` | 0.3.34 |
 | `tracing` | 0.1.44 |
 | `hex` | 0.4.3 |
+| `md-5` / `sha1` | 0.11.0 / 0.11.0 |
 
 `Cargo.lock` 会锁定实际解析到的完整依赖树。升级依赖：
 
