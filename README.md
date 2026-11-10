@@ -1,6 +1,7 @@
 # botgo-rs
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://gukashare.github.io/botgo-rs/)
 
 QQ 机器人 OpenAPI 与事件网关的 Rust SDK，是腾讯官方 Go SDK
 [`tencent-connect/botgo`](https://github.com/tencent-connect/botgo) 的本地 Rust 复刻。
