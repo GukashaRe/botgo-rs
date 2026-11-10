@@ -294,6 +294,11 @@ async fn run_connection(
                 "gateway sent an empty frame before HELLO".to_owned(),
             ));
         }
+        Incoming::Ping(_) => {
+            return Err(Error::Protocol(
+                "gateway sent a ping before HELLO".to_owned(),
+            ));
+        }
     };
     if hello_payload.op != OpCode::HELLO {
         return Err(Error::Protocol(format!(
@@ -355,6 +360,18 @@ async fn run_connection(
                     token_source.invalidate();
                 }
                 return Ok(classify_close(code));
+            }
+            Ok(Incoming::Ping(payload)) => {
+                // tungstenite queues an automatic pong, but with a split
+                // stream it may not be flushed until the next heartbeat. Reply
+                // immediately so the server does not reset an otherwise idle
+                // connection.
+                sink.lock()
+                    .await
+                    .send(Message::Pong(payload.into()))
+                    .await
+                    .map_err(Error::from)?;
+                continue;
             }
             Ok(Incoming::Ignored) => continue,
             Err(error) => {
@@ -443,6 +460,10 @@ fn start_heartbeat(
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(interval);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        // The first interval tick fires immediately; consume it so the first
+        // heartbeat is sent after one full heartbeat interval, as expected by
+        // the gateway.
+        ticker.tick().await;
         loop {
             ticker.tick().await;
             let payload = WsPayload::new(
@@ -480,6 +501,7 @@ impl Drop for HeartbeatTask {
 enum Incoming {
     Payload(WsPayload),
     Closed(u16),
+    Ping(Vec<u8>),
     Ignored,
 }
 
@@ -491,7 +513,8 @@ fn parse_message(message: Message) -> Result<Incoming> {
             let code = frame.as_ref().map_or(0, |frame| u16::from(frame.code));
             return Ok(Incoming::Closed(code));
         }
-        Message::Ping(_) | Message::Pong(_) | Message::Frame(_) => {
+        Message::Ping(payload) => return Ok(Incoming::Ping(payload.to_vec())),
+        Message::Pong(_) | Message::Frame(_) => {
             return Ok(Incoming::Ignored);
         }
     };
@@ -511,6 +534,24 @@ fn classify_transport_error(error: tokio_tungstenite::tungstenite::Error) -> Res
             "connection reset without closing handshake".to_owned(),
         ));
     }
+
+    if let tokio_tungstenite::tungstenite::Error::Io(io) = &error {
+        let retryable_kind = matches!(
+            io.kind(),
+            std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
+                | std::io::ErrorKind::UnexpectedEof
+                | std::io::ErrorKind::BrokenPipe
+                | std::io::ErrorKind::TimedOut
+        );
+        let retryable_os = matches!(io.raw_os_error(), Some(10053 | 10054 | 10060));
+        if retryable_kind || retryable_os {
+            return Ok(ConnectionEnd::Resume(format!(
+                "gateway connection interrupted: {io}"
+            )));
+        }
+    }
+
     Err(Error::WebSocket(error))
 }
 
@@ -562,6 +603,16 @@ mod tests {
         assert!(matches!(
             classify_close(close_code::SESSION_TIMEOUT),
             ConnectionEnd::Resume(_)
+        ));
+    }
+
+    #[test]
+    fn windows_connection_reset_is_resumable() {
+        let error =
+            tokio_tungstenite::tungstenite::Error::Io(std::io::Error::from_raw_os_error(10054));
+        assert!(matches!(
+            classify_transport_error(error),
+            Ok(ConnectionEnd::Resume(_))
         ));
     }
 }

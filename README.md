@@ -516,7 +516,7 @@ tests/
 
 ## 版本管理
 
-当前版本：`0.2.0`。
+当前版本：`0.2.1`。
 
 项目遵循 [Semantic Versioning](https://semver.org/)：
 

@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-11
+
+### Fixed
+
+- Respond to WebSocket `Ping` frames immediately instead of waiting for the
+  next heartbeat, preventing idle connections from being reset by the gateway.
+- Delay the first heartbeat until one full `heartbeat_interval` has elapsed.
+- Treat Windows `WSAECONNRESET`/`WSAECONNABORTED`/timeout and common transient
+  I/O disconnects as resumable gateway interruptions rather than fatal errors.
+
 ## [0.2.0] - 2026-11-11
 
 ### Added

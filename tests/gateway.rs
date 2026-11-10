@@ -78,6 +78,22 @@ async fn gateway_identifies_and_emits_typed_events() {
             .unwrap();
 
         socket
+            .send(Message::Ping(vec![1, 2, 3].into()))
+            .await
+            .unwrap();
+
+        let pong = tokio::time::timeout(Duration::from_secs(3), async {
+            loop {
+                if let Message::Pong(payload) = socket.next().await.unwrap().unwrap() {
+                    break payload;
+                }
+            }
+        })
+        .await
+        .expect("gateway did not answer websocket ping");
+        assert_eq!(pong.as_ref(), &[1, 2, 3]);
+
+        socket
             .send(Message::Text(
                 json!({
                     "op": 0,
