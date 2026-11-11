@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-11
+
+### Changed
+
+- OpenAPI requests now use
+  `User-Agent: botGo-rs/<crate-version> rust/<rustc-version>` instead of
+  `BotGoSDK/<version>`. The Rust version is read from the actual compiler at
+  build time via `build.rs`.
+
 ## [0.2.1] - 2026-11-11
 
 ### Fixed

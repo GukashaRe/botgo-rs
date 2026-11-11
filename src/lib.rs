@@ -70,3 +70,24 @@ pub use token::{AccessToken, Credentials, QqBotTokenSource, TokenSource};
 
 /// The SDK version reported in the `User-Agent` header.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// The Rust compiler version embedded at build time.
+pub const RUST_VERSION: &str = env!("BOTGO_RUST_VERSION");
+
+/// The `User-Agent` sent with every OpenAPI request.
+pub const USER_AGENT: &str = concat!(
+    "botGo-rs/",
+    env!("CARGO_PKG_VERSION"),
+    " rust/",
+    env!("BOTGO_RUST_VERSION")
+);
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn user_agent_identifies_sdk_and_rust_version() {
+        assert!(super::USER_AGENT.starts_with(concat!("botGo-rs/", env!("CARGO_PKG_VERSION"))));
+        assert!(super::USER_AGENT.contains(" rust/"));
+        assert_ne!(super::RUST_VERSION, "");
+    }
+}

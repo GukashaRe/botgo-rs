@@ -337,7 +337,7 @@ impl OpenApi {
             .timeout(self.inner.timeout)
             .header(AUTHORIZATION, authorization)
             .header(UNION_APP_ID_HEADER, app_id)
-            .header(USER_AGENT, format!("BotGoSDK/{}", crate::VERSION));
+            .header(USER_AGENT, crate::USER_AGENT);
 
         if !query.is_empty() {
             request = request.query(query);

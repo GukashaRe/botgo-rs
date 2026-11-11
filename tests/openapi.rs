@@ -38,6 +38,7 @@ async fn post_message_sends_auth_and_parses_the_response() {
         .and(path("/channels/channel-1/messages"))
         .and(header("authorization", "QQBot token"))
         .and(header("x-union-appid", "app-id"))
+        .and(header("user-agent", botgo::USER_AGENT))
         .and(body_json(serde_json::json!({ "content": "hello" })))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "id": "message-1",

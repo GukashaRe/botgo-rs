@@ -28,6 +28,23 @@ QQ 机器人 OpenAPI 与事件网关的 Rust SDK，是腾讯官方 Go SDK
 | `search` | 内联搜索模拟器 |
 | `message` | `ETLInput`、@ 提及、子频道提及、emoji、命令解析 |
 
+## 请求头
+
+所有 OpenAPI 请求都会发送：
+
+```text
+User-Agent: botGo-rs/<crate-version> rust/<rustc-version>
+```
+
+例如：
+
+```text
+User-Agent: botGo-rs/0.2.2 rust/1.99.1
+```
+
+crate 版本来自 `Cargo.toml`，Rust 版本由 `build.rs` 在构建时从实际使用的
+`rustc --version` 读取，不是硬编码的 MSRV。
+
 ## 环境要求
 
 - Rust `1.88+`（Edition 2024）
@@ -517,7 +534,7 @@ tests/
 
 ## 版本管理
 
-当前版本：`0.2.1`。
+当前版本：`0.2.2`。
 
 项目遵循 [Semantic Versioning](https://semver.org/)：
 
